@@ -9,13 +9,13 @@ import Footer from "../components/Footer";
 import { useState, useEffect } from "react";
 import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "../components/variants/button";
+import { SupportWidget } from "../components/SupportWidget";
 
-interface HomeProp {
-  cartItemCount: number;
-  handleAddToCart: (product: ProductSummary) => void;
-}
+// interface HomeProp {
+//   cartItemCount: number;
+// }
 
-const HomePage = ({ cartItemCount, handleAddToCart }: HomeProp) => {
+const HomePage = () => {
   const [products, setProduct] = useState<ProductSummary[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -34,30 +34,20 @@ const HomePage = ({ cartItemCount, handleAddToCart }: HomeProp) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
     alert("Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm.");
-    setFormData({
-      name: "",
-      phone: "",
-      email: "",
-      message: "",
-    });
+    setFormData({ name: "", phone: "", email: "", message: "" });
   };
 
   const fetchProducts = async () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("http://localhost:3000/api/products?limit=18");
-      if (!res.ok)
-        throw new Error("Không thể tải danh sách sản phẩm. Vui lòng thử lại.");
+      // Tăng limit lên 20 để đủ data chia dòng
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/products?limit=100`);
+      if (!res.ok) throw new Error("Không thể tải danh sách sản phẩm.");
       const data = await res.json();
-      const productRes = data.data as ProductSummary[];
-      setProduct(productRes);
+      setProduct(data.data as ProductSummary[]);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError("Đã xảy ra lỗi không xác định.");
-      }
+      setError(err instanceof Error ? err.message : "Lỗi không xác định");
     } finally {
       setTimeout(() => setLoading(false), 500);
     }
@@ -67,39 +57,35 @@ const HomePage = ({ cartItemCount, handleAddToCart }: HomeProp) => {
     fetchProducts();
   }, []);
 
+  // SỬA: Lấy 10 sản phẩm (5 cột x 2 dòng)
   const whatsHotProducts = products
     .filter((p: ProductSummary) => (p.sections || []).includes(whatsHotTab))
-    .slice(0, 3);
+    .slice(0, 10);
 
+  // SỬA: Lấy 10 sản phẩm
   const featuredProducts = products
     .filter((item) =>
       (item.category || []).some((cat) => cat.includes(featuredTab))
     )
-    .slice(0, 3);
+    .slice(0, 10);
 
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
-        <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
-        <p className="text-gray-500 font-medium animate-pulse">
-          Loading fashion expreriences...
-        </p>
+        <Loader2 className="h-10 w-10 animate-spin text-indigo-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center bg-red-50 px-4 text-center">
-        <AlertCircle className="h-16 w-16 text-red-500 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Rất tiếc, đã có lỗi xảy ra!
-        </h2>
-        <p className="text-gray-600 mb-6 max-w-md">{error}</p>
+      <div className="min-h-[50vh] flex flex-col items-center justify-center text-center px-4">
+        <AlertCircle className="h-12 w-12 text-red-500 mb-2" />
+        <p className="text-gray-600 mb-4">{error}</p>
         <Button
           onClick={fetchProducts}
           variant="default"
-          className="bg-red-600 hover:bg-red-700"
+          className="bg-red-600"
         >
           Thử lại
         </Button>
@@ -108,30 +94,30 @@ const HomePage = ({ cartItemCount, handleAddToCart }: HomeProp) => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50/30 flex flex-col font-sans">
       <Hero />
 
-      <section className="pt-8 pb-16 md:pt-12 md:pb-24 bg-white relative z-10 shadow-sm">
+      {/* SỬA: Giảm padding (py-8 thay vì pt-12 pb-24) để các khối sát nhau */}
+      <section className="pt-0 pb-8 bg-white relative z-10 shadow-sm">
         <Hot
           whatsHotProducts={whatsHotProducts}
-          handleAddToCart={handleAddToCart}
           whatsHotTab={whatsHotTab}
           setWhatsHotTab={setWhatsHotTab}
         />
       </section>
 
-      <section className="pt-8 pb-16 md:pt-10 bg-gray-50/50 border-t border-b border-gray-90">
+      {/* SỬA: Giảm padding */}
+      <section className="py-8 bg-gray-50/50 border-t border-b border-gray-100">
         <Featured
           featuredTab={featuredTab}
           setFeaturedTab={setFeaturedTab}
           featuredProducts={featuredProducts}
-          handleAddToCart={handleAddToCart}
         />
       </section>
 
       <Merit />
 
-      <section className="bg-white relative z-10">
+      <section className="bg-white relative z-10 py-8">
         <Contact
           handleSubmitContact={handleSubmitContact}
           formData={formData}
@@ -140,6 +126,7 @@ const HomePage = ({ cartItemCount, handleAddToCart }: HomeProp) => {
       </section>
 
       <Footer />
+      <SupportWidget />
     </div>
   );
 };

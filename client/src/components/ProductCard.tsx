@@ -1,7 +1,7 @@
 import { Button } from "./variants/button";
 import { ImageWithFallback } from "./imagefallback";
 import { Badge } from "./variants/Badge";
-import { ShoppingBag, Eye } from "lucide-react";
+import { Eye } from "lucide-react";
 import { Link } from "react-router";
 
 export interface ProductSummary {
@@ -18,10 +18,9 @@ export interface ProductSummary {
 
 interface ProductCardProps {
   product: ProductSummary;
-  onAddToCart: (product: ProductSummary) => void;
 }
 
-const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
+const ProductCard = ({ product }: ProductCardProps) => {
   const discount = product.originalPrice
     ? Math.round(
         ((product.originalPrice - product.price) / product.originalPrice) * 100
@@ -29,62 +28,57 @@ const ProductCard = ({ product, onAddToCart }: ProductCardProps) => {
     : 0;
 
   return (
-    <div className="group relative bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-      <div className="relative aspect-[3/4] overflow-hidden">
+    // SỬA: Giảm shadow mặc định, chỉ shadow mạnh khi hover
+    <div className="group relative bg-white rounded-md border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-300 overflow-hidden">
+      {/* Ảnh sản phẩm */}
+      <div className="relative aspect-[3/4] overflow-hidden bg-gray-100">
         <ImageWithFallback
           src={product.image}
           alt={product.name}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
 
-        {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+        {/* Badges: Làm nhỏ lại */}
+        <div className="absolute top-2 left-2 flex flex-col gap-1 z-10">
           {product.sections?.includes("new") && (
-            <Badge className="bg-black text-white font-semibold px-2 py-1 rounded-md">
-              New
+            <Badge className="bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
+              NEW
             </Badge>
           )}
           {product.sections?.includes("sale") && discount > 0 && (
-            <Badge className="bg-red-600 text-white font-semibold px-2 py-1 rounded-md">
+            <Badge className="bg-red-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded">
               -{discount}%
             </Badge>
           )}
         </div>
-        <div className="absolute bottom-3 left-3 right-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-          {/* Quick add button */}
-          <Button
-            onClick={(e) => {
-              e.preventDefault();
-              onAddToCart(product);
-            }}
-            className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-900 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg"
-          >
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            Add to Cart
-          </Button>
 
+        {/* Nút View Detail: Hiện khi hover */}
+        <div className="absolute inset-x-3 bottom-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
           <Link to={`/productdetail/${product.id}`} className="w-full">
-            <Button className="w-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gray-900 hover:bg-gray-800 text-white font-bold py-2 px-4 rounded-lg">
-              <Eye className="h-4 w-4 mr-2" />
-              View Detail
+            <Button className="w-full bg-white/90 hover:bg-black hover:text-white text-black font-medium text-xs py-2 shadow-sm backdrop-blur-sm transition-colors">
+              <Eye className="h-3 w-3 mr-1.5" />
+              Quick View
             </Button>
           </Link>
         </div>
       </div>
 
-      {/* Product Info */}
-      <div className="p-4 space-y-2">
-        <Link to="/productdetail">
-          <h3 className="text-lg font-semibold text-gray-900 truncate">
+      {/* Thông tin sản phẩm: Giảm padding và font size */}
+      <div className="p-3">
+        <Link to={`/productdetail/${product.id}`} className="block">
+          {/* SỬA: text-sm thay vì text-lg */}
+          <h3 className="text-sm font-medium text-gray-700 truncate hover:text-black transition-colors">
             {product.name}
           </h3>
         </Link>
-        <div className="flex items-center gap-3">
-          <p className="font-bold text-xl text-gray-900">
+
+        <div className="flex items-center gap-2 mt-1">
+          {/* SỬA: text-base thay vì text-xl */}
+          <p className="font-bold text-base text-gray-900">
             ${product.price.toFixed(2)}
           </p>
           {product.originalPrice && product.originalPrice > product.price && (
-            <p className="text-sm text-gray-400 line-through">
+            <p className="text-xs text-gray-400 line-through">
               ${product.originalPrice.toFixed(2)}
             </p>
           )}

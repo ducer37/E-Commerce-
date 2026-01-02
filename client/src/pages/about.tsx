@@ -1,4 +1,4 @@
-import { Award, Leaf, Users, Zap } from "lucide-react"; // Import icons
+import { Award, Shield, Users, Target, Leaf } from "lucide-react";
 
 const AboutPage = () => {
   return (

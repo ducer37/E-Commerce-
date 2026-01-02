@@ -11,7 +11,7 @@ import {
   Send,
 } from "lucide-react";
 import type { FormData } from "../App";
-import { cn } from "../utils";
+
 
 interface ContactProp {
   handleSubmitContact: (e: React.FormEvent) => void;

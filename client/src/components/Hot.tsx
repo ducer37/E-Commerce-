@@ -3,21 +3,15 @@ import ProductCard from "./ProductCard";
 import type { ProductSummary } from "./ProductCard";
 import { Tabs, TabsList, TabsTrigger } from "./Tab";
 import { Link } from "react-router"; // Lưu ý: Thường là react-router-dom
-import { ArrowRight } from "lucide-react"; // Icon mũi tên (nếu bạn có cài lucide-react)
+ // Icon mũi tên (nếu bạn có cài lucide-react)
 
 interface HotProp {
   whatsHotProducts: ProductSummary[];
-  handleAddToCart: (product: ProductSummary) => void;
   whatsHotTab: string;
   setWhatsHotTab: (value: string) => void;
 }
 
-const Hot = ({
-  whatsHotProducts,
-  handleAddToCart,
-  whatsHotTab,
-  setWhatsHotTab,
-}: HotProp) => {
+const Hot = ({ whatsHotProducts, whatsHotTab, setWhatsHotTab }: HotProp) => {
   return (
     <section className="w-full py-20 bg-gray-50/50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -82,12 +76,12 @@ const Hot = ({
 
         {/* --- PRODUCT GRID --- */}
         {whatsHotProducts.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
             {whatsHotProducts.map((product) => (
               <div key={product.id} className="animate-fade-in-up">
                 {" "}
                 {/* Class này cần config tailwind hoặc CSS */}
-                <ProductCard product={product} onAddToCart={handleAddToCart} />
+                <ProductCard product={product} />
               </div>
             ))}
           </div>

@@ -1,7 +1,9 @@
 import { Request, Response } from "express";
 import * as productService from "../services/productService";
+import { catchAsync } from "../utils/catchAsync";
+import { sendResponse } from "../utils/apiResponse";
 
-export const getProducts = async (req: Request, res: Response) => {
+export const getProducts = catchAsync(async (req: Request, res: Response) => {
   const { search, category, sort, page, limit } = req.query;
 
   const filters = {
@@ -12,46 +14,27 @@ export const getProducts = async (req: Request, res: Response) => {
     limit: limit ? Number(limit) : 12,
   };
 
-  try {
-    const result = await productService.getAllProducts(filters);
+  const result = await productService.getAllProducts(filters);
 
-    res.json({
-      success: true,
-      data: result.data,
-      pagination: result.meta,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+  res.json({
+    success: true,
+    data: result.data,
+    pagination: result.meta,
+  });
+});
+
+export const getProductDetail = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  if (isNaN(Number(id))) {
+    return sendResponse(res, 400, false, "ID sản phẩm không hợp lệ");
   }
-};
 
-export const getProductDetail = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
+  const product = await productService.getProductById(id);
 
-    if (isNaN(Number(id))) {
-      res
-        .status(400)
-        .json({ success: false, message: "ID sản phẩm không hợp lệ" });
-      return;
-    }
-
-    const product = await productService.getProductById(id);
-
-    if (!product) {
-      res
-        .status(404)
-        .json({ success: false, message: "Không tìm thấy sản phẩm" });
-      return;
-    }
-
-    res.json({
-      success: true,
-      data: product,
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: "Lỗi server" });
+  if (!product) {
+    return sendResponse(res, 404, false, "Không tìm thấy sản phẩm");
   }
-};
+
+  sendResponse(res, 200, true, "Lấy thông tin thành công", product);
+});

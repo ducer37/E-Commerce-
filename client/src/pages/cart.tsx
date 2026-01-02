@@ -1,34 +1,149 @@
 import { OrderSummary } from "../components/OrderSummary";
-import { ShoppingBag, ArrowLeft, Ticket } from "lucide-react";
+import { ShoppingBag, ArrowLeft, Ticket, Loader2 } from "lucide-react";
+// Đảm bảo CartItemType trong App.tsx đã được update có đủ các trường: stock, productId, variantId
 import type { CartItemType } from "../App";
-import { useState } from "react";
-import { CartItem } from "../components/CartItem";
-import { Link } from "react-router";
+import { useState, useEffect } from "react";
+import { CartItem } from "../components/CartItem"; // Import component mới của bạn
+import { Link, useNavigate } from "react-router";
 import { Button } from "../components/variants/button";
 
 interface CartProp {
   cartItems: CartItemType[];
-  setCartItems: (cartitem: CartItemType[]) => void;
+  setCartItems: React.Dispatch<React.SetStateAction<CartItemType[]>>;
 }
 
 const CartPage = ({ cartItems, setCartItems }: CartProp) => {
+  const navigate = useNavigate();
+
+  // State UI
   const [shipping] = useState(15.0);
   const [discount, setDiscount] = useState(0);
   const [freeShipping, setFreeShipping] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleQuantityChange = (id: string, quantity: number) => {
-    if (quantity <= 0) {
+  // Helper lấy token
+  const getToken = () => localStorage.getItem("token");
+
+  // 1. Fetch Cart từ Backend
+  useEffect(() => {
+    const fetchCart = async () => {
+      const token = getToken();
+
+      // Nếu không có token -> Coi như giỏ hàng rỗng hoặc redirect login
+      if (!token) {
+        setCartItems([]);
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Lưu ý: Port 5000 (Backend)
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/cart`, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`, // --- QUAN TRỌNG: Gửi Token ---
+          },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          // Token hết hạn -> Logout
+          localStorage.removeItem("token");
+          alert("Phiên đăng nhập hết hạn, vui lòng đăng nhập lại.");
+          navigate("/signin");
+          return;
+        }
+
+        const data = await response.json();
+
+        // Backend trả về mảng khớp với CartItemProps, set thẳng vào state
+        if (Array.isArray(data)) {
+          setCartItems(data);
+        } else {
+          setCartItems([]);
+        }
+      } catch (error) {
+        console.error("Lỗi tải giỏ hàng:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchCart();
+  }, [setCartItems, navigate]);
+
+  // 2. Xử lý thay đổi số lượng
+  const handleQuantityChange = async (id: string, newQuantity: number) => {
+    const token = getToken();
+    if (!token) return;
+
+    if (newQuantity <= 0) {
       handleRemoveItem(id);
-    } else {
-      setCartItems(
-        cartItems.map((item) => (item.id === id ? { ...item, quantity } : item))
-      );
+      return;
+    }
+
+    // Optimistic UI Update (Cập nhật giao diện trước khi gọi API cho mượt)
+    const oldCart = [...cartItems];
+    setCartItems((prev) =>
+      prev.map((item) =>
+        item.id === id ? { ...item, quantity: newQuantity } : item
+      )
+    );
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/cart/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ quantity: newQuantity }),
+      });
+
+      if (!res.ok) throw new Error("Update failed");
+    } catch (error) {
+      console.error("Lỗi cập nhật:", error);
+      // Nếu lỗi thì revert lại số cũ
+      setCartItems(oldCart);
+      alert("Không thể cập nhật số lượng (Có thể lỗi mạng hoặc hết hàng).");
     }
   };
 
-  const handleRemoveItem = (id: string) => {
-    setCartItems(cartItems.filter((item) => item.id !== id));
+  // 3. Xử lý xóa sản phẩm
+  const handleRemoveItem = async (id: string) => {
+    const token = getToken();
+    if (!token) return;
+
+    // Optimistic UI
+    const oldCart = [...cartItems];
+    setCartItems((prev) => prev.filter((item) => item.id !== id));
+
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/cart/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) throw new Error("Delete failed");
+    } catch (error) {
+      console.error("Lỗi xóa:", error);
+      setCartItems(oldCart);
+      alert("Không thể xóa sản phẩm.");
+    }
   };
+
+  // --- Logic hiển thị (Giữ nguyên code cũ của bạn) ---
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white space-y-4">
+        <Loader2 className="h-12 w-12 animate-spin text-indigo-600" />
+        <p className="text-gray-500 font-medium animate-pulse">
+          Loading Cart...
+        </p>
+      </div>
+    );
+  }
 
   const subtotal = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
@@ -37,6 +152,7 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
 
   const actualShipping = freeShipping ? 0 : shipping;
 
+  // Coupon Logic (Tạm thời giữ ở Frontend)
   const possessedCodes = [
     { code: "SAVE10", description: "$10 off your order" },
     { code: "FASHION15", description: "$15 off your order" },
@@ -62,6 +178,9 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
         setDiscount(discountData.value);
         setFreeShipping(false);
       }
+      alert(`Applied code: ${code}`);
+    } else {
+      alert("Invalid code");
     }
   };
 
@@ -84,6 +203,7 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
         </div>
 
         <div className="grid lg:grid-cols-12 gap-8 items-start">
+          {/* Left Column: Cart Items */}
           <div className="lg:col-span-8 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
@@ -115,6 +235,10 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
                   <div className="space-y-6">
                     {cartItems.map((item, index) => (
                       <div key={item.id}>
+                        {/* CartItem Mới: 
+                            - Tự động nhận các props: id, productId, variantId, stock... từ item 
+                            - onQuantityChange và onRemove đã được sửa để gọi API
+                        */}
                         <CartItem
                           {...item}
                           onQuantityChange={handleQuantityChange}
@@ -131,6 +255,7 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
             </div>
           </div>
 
+          {/* Right Column: Order Summary */}
           <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-24">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-6">

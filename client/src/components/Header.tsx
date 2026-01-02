@@ -1,12 +1,25 @@
 import { Button } from "./variants/button";
-import { ShoppingCart, User, Menu, Search } from "lucide-react"; // Import thêm icon Search
-import { Link } from "react-router"; // Sửa lại import đúng chuẩn
+import { ShoppingCart, User, Menu } from "lucide-react";
+import { Link, useNavigate } from "react-router";
+import { useState } from "react";
 
 interface HeaderProps {
   cartItemCount: number;
 }
 
 const Header = ({ cartItemCount }: HeaderProps) => {
+  const navigate = useNavigate();
+
+  const handleUserClick = () => {
+    const token = localStorage.getItem("token");
+
+    if (token) {
+      navigate("/profile");
+    } else {
+      navigate("/signin");
+    }
+  };
+
   return (
     <>
       {/* 1. ANNOUNCEMENT BAR (Thanh thông báo trên cùng) */}
@@ -56,12 +69,10 @@ const Header = ({ cartItemCount }: HeaderProps) => {
                 variant="ghost"
                 size="icon"
                 className="hidden sm:flex text-gray-600 hover:text-black hover:bg-gray-50 transition-colors"
-                asChild
+                onClick={handleUserClick}
               >
-                <Link to="/signin">
-                  <User className="h-5 w-5" />
-                  <span className="sr-only">User Profile</span>
-                </Link>
+                <User className="h-5 w-5" />
+                <span className="sr-only">User Profile</span>
               </Button>
 
               {/* Cart */}

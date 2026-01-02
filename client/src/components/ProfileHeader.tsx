@@ -1,14 +1,37 @@
 import { ImageWithFallback } from "./imagefallback";
-import { Edit, Calendar, Mail } from "lucide-react";
+import { Edit, Calendar, Mail, LogOut } from "lucide-react";
 
-export function ProfileHeader() {
-  const user = {
-    name: "Emma Richardson",
-    email: "emma.richardson@email.com",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop",
-    memberSince: "March 2023",
+// Định nghĩa kiểu dữ liệu User cho Frontend
+export interface UserProfileType {
+  id: number;
+  name: string;
+  email: string;
+  avatar?: string | null;
+  createdAt: string;
+}
+
+interface ProfileHeaderProps {
+  user: UserProfileType | null;
+  onEditClick: () => void;
+  onLogout: () => void;
+}
+
+export function ProfileHeader({
+  user,
+  onEditClick,
+  onLogout,
+}: ProfileHeaderProps) {
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "long",
+      year: "numeric",
+    });
   };
+
+  if (!user) {
+    return <div className="h-64 bg-gray-100 rounded-2xl animate-pulse"></div>;
+  }
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
@@ -19,7 +42,7 @@ export function ProfileHeader() {
           <div className="relative">
             <div className="p-1.5 bg-white rounded-full shadow-sm">
               <ImageWithFallback
-                src={user.avatar}
+                src={user.avatar || ""} // Nếu null thì ImageWithFallback sẽ xử lý
                 alt={user.name}
                 className="w-32 h-32 rounded-full object-cover"
               />
@@ -42,14 +65,25 @@ export function ProfileHeader() {
                   </div>
                   <div className="flex items-center gap-1.5 hover:text-gray-700 transition-colors">
                     <Calendar className="w-4 h-4" />
-                    Joined {user.memberSince}
+                    Joined {formatDate(user.createdAt)}
                   </div>
                 </div>
               </div>
 
-              <button className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-black text-white rounded-full text-sm font-medium hover:bg-zinc-800 transition-all shadow-md hover:shadow-lg active:scale-95">
+              <button
+                onClick={onEditClick}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-black text-white rounded-full text-sm font-medium hover:bg-zinc-800 transition-all shadow-md hover:shadow-lg active:scale-95"
+              >
                 <Edit className="w-4 h-4" />
                 Edit Profile
+              </button>
+              <button
+                onClick={onLogout}
+                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-red-600 border border-gray-200 rounded-full text-sm font-medium hover:bg-red-50 hover:border-red-200 transition-all shadow-sm active:scale-95"
+                title="Sign out"
+              >
+                <LogOut className="w-4 h-4" />
+                Log Out
               </button>
             </div>
           </div>

@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,24 +9,74 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id            Int           @id @default(autoincrement())
-  email         String        @unique
-  password      String
-  fullName      String?
-  phone         String?
-  role          Role          @default(USER)
-  avatar        String?
-  createdAt     DateTime      @default(now())
-  addresses     Address[]
-  cart          Cart?
-  orders        Order[]
-  reviews       Review[]
-  savedVouchers UserVoucher[]
+// ================= ENUMS =================
+enum Role {
+  CUSTOMER
+  ADMIN
 }
 
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPING
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+// ================= USER & AUTH =================
+model User {
+  id              Int              @id @default(autoincrement())
+  email           String           @unique
+  password        String
+  name            String?
+  phone           String?
+  role            Role             @default(CUSTOMER)
+  avatar          String?
+  createdAt       DateTime         @default(now())
+
+  addresses       Address[]
+  cart            Cart?
+  orders          Order[]
+  reviews         Review[]
+  supportMessages SupportMessage[]
+  userPayments    UserPayment[]    
+  claimedVouchers UserVoucher[]
+  favorites       ProductVariant[] @relation("UserFavorites")
+}
+
+// ================= PAYMENT SYSTEM =================
+model PaymentMethod {
+  id           Int           @id @default(autoincrement())
+  name         String
+  code         String        @unique 
+  description  String?
+  image        String?
+  isActive     Boolean       @default(true)
+
+  savedInUsers UserPayment[]
+}
+
+model UserPayment {
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  paymentMethodId Int
+  paymentMethod   PaymentMethod @relation(fields: [paymentMethodId], references: [id])
+  
+  provider        String?       
+  accountNumber   String        
+  expiryDate      String?
+  isDefault       Boolean       @default(false)
+  createdAt       DateTime      @default(now())
+}
+
+// ================= ADDRESS =================
 model Address {
   id            Int     @id @default(autoincrement())
+  userId        Int
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
   recipientName String
   phone         String
   city          String
@@ -32,21 +84,23 @@ model Address {
   ward          String?
   detail        String
   isDefault     Boolean @default(false)
-  userId        Int
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// ================= CATEGORY =================
 model Category {
   id       Int        @id @default(autoincrement())
   name     String
   slug     String     @unique
   image    String?
+  
   parentId Int?
   parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
   children Category[] @relation("CategoryHierarchy")
+  
   products Product[]  @relation("CategoryToProduct")
 }
 
+// ================= PRODUCT SYSTEM =================
 model Product {
   id            Int              @id @default(autoincrement())
   name          String
@@ -55,13 +109,12 @@ model Product {
   thumbnail     String?
   originalPrice Decimal          @db.Decimal(10, 2)
   price         Decimal          @db.Decimal(10, 2)
-  discount      Int              @default(0)
   isActive      Boolean          @default(true)
-  sold          Int              @default(0)
   rating        Float            @default(0)
   reviewCount   Int              @default(0)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
+
   variants      ProductVariant[]
   reviews       Review[]
   categories    Category[]       @relation("CategoryToProduct")
@@ -70,118 +123,127 @@ model Product {
 model ProductVariant {
   id         Int         @id @default(autoincrement())
   productId  Int
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
   color      String
   size       String
   sku        String?     @unique
   image      String?
   stock      Int         @default(0)
+
   cartItems  CartItem[]
   orderItems OrderItem[]
-  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  favoritedBy User[]     @relation("UserFavorites")
 
   @@unique([productId, color, size])
 }
 
+// ================= CART SYSTEM =================
 model Cart {
   id        Int        @id @default(autoincrement())
   userId    Int        @unique
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  cartItems CartItem[]
   updatedAt DateTime   @updatedAt
-  user      User       @relation(fields: [userId], references: [id])
-  items     CartItem[]
 }
 
 model CartItem {
   id        Int            @id @default(autoincrement())
   cartId    Int
+  cart      Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
   variantId Int
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
   quantity  Int
-  cart      Cart           @relation(fields: [cartId], references: [id])
-  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([cartId, variantId])
 }
 
-model Voucher {
-  id           Int           @id @default(autoincrement())
-  code         String        @unique
-  value        Decimal       @db.Decimal(10, 2)
-  stock        Int           @default(0)
-  usedCount    Int           @default(0)
-  startDate    DateTime
-  endDate      DateTime
-  isActive     Boolean       @default(true)
-  orders       Order[]
-  savedByUsers UserVoucher[]
-}
-
-model UserVoucher {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  voucherId Int
-  isUsed    Boolean  @default(false)
-  savedAt   DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id])
-  voucher   Voucher  @relation(fields: [voucherId], references: [id])
-
-  @@unique([userId, voucherId])
-}
-
+// ================= ORDER SYSTEM =================
 model Order {
-  id             Int         @id @default(autoincrement())
-  userId         Int
-  status         OrderStatus @default(PENDING)
-  totalAmount    Decimal     @db.Decimal(10, 2)
-  shipping       Decimal     @db.Decimal(10, 2)
-  discountAmount Decimal     @default(0) @db.Decimal(10, 2)
-  finalAmount    Decimal     @db.Decimal(10, 2)
-  payment        String
-  address        String
-  phone          String
-  createdAt      DateTime    @default(now())
-  voucherId      Int?
-  user           User        @relation(fields: [userId], references: [id])
-  voucher        Voucher?    @relation(fields: [voucherId], references: [id])
-  items          OrderItem[]
+  id              Int            @id @default(autoincrement())
+  userId          Int
+  user            User           @relation(fields: [userId], references: [id])
+  
+  shippingAddress String         @db.Text 
+  paymentMethod   String         
+  
+  voucherId       Int?
+  voucher         Voucher?       @relation(fields: [voucherId], references: [id])
+  
+  status          OrderStatus    @default(PENDING)
+  totalAmount     Decimal        @db.Decimal(10, 2)
+  shippingFee     Decimal        @db.Decimal(10, 2) @default(0)
+  discountAmount  Decimal        @db.Decimal(10, 2) @default(0)
+  finalAmount     Decimal        @db.Decimal(10, 2)
+  paymentStatus   String?        
+  
+  orderItems      OrderItem[]
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
 }
 
 model OrderItem {
   id        Int            @id @default(autoincrement())
   orderId   Int
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
   variantId Int
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  
   quantity  Int
   price     Decimal        @db.Decimal(10, 2)
-  order     Order          @relation(fields: [orderId], references: [id])
-  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@unique([orderId, variantId])
 }
 
+// ================= VOUCHER SYSTEM =================
+model Voucher {
+  id          Int           @id @default(autoincrement())
+  code        String        @unique
+  value       Decimal       @db.Decimal(10, 2)
+  type        String        @default("FIXED")
+  stock       Int           @default(0)
+  usedCount   Int           @default(0)
+  startDate   DateTime
+  endDate     DateTime
+  isActive    Boolean       @default(true)
+  
+  orders      Order[]
+  claimers    UserVoucher[]
+}
+
+model UserVoucher {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  voucherId Int
+  voucher   Voucher @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  
+  isUsed    Boolean @default(false)
+  claimedAt DateTime @default(now())
+
+  @@unique([userId, voucherId])
+}
+
+// ================= EXTRAS =================
 model Review {
   id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  productId Int
+  product   Product  @relation(fields: [productId], references: [id])
+  
   rating    Int
   comment   String?
   createdAt DateTime @default(now())
-  userId    Int
-  productId Int
-  product   Product  @relation(fields: [productId], references: [id])
-  user      User     @relation(fields: [userId], references: [id])
 }
 
 model SupportMessage {
   id        Int      @id @default(autoincrement())
-  name      String
-  email     String
-  phone     String
-  content   String
-  status    String   @default("PENDING")
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+  
+  content   String   @db.Text
+  status    String   @default("OPEN")
   createdAt DateTime @default(now())
-}
-
-enum Role {
-  USER
-  ADMIN
-}
-
-enum OrderStatus {
-  PENDING
-  PROCESSING
-  SHIPPED
-  DELIVERED
-  CANCELLED
 }
