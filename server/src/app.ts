@@ -9,6 +9,7 @@ import cartRoutes from "./routes/cart.routes";
 import userRoutes from "./routes/user.routes";
 import addressRoutes from "./routes/address.routes";
 import orderRoutes from "./routes/order.routes";
+import paymentRoutes from "./routes/payment.routes";
 
 const app = express();
 app.use(cors());
@@ -21,6 +22,7 @@ app.use("/api/cart", cartRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/addresses", addressRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/payment", paymentRoutes);
 
 // Global Error Handler
 app.use((err: any, req: any, res: any, next: any) => {

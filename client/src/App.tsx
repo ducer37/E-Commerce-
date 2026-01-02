@@ -12,6 +12,7 @@ import ProductDetail from "./components/ProductDetails";
 // import ContactPage from "./pages/contact";
 import ProfilePage from "./pages/profile";
 import OrderDetailPage from "./components/OrderDetailPage";
+import PaymentResultPage from "./pages/payment-result";
 
 export interface CartItemType {
   id: string;
@@ -170,6 +171,7 @@ function App() {
           element={<ProductDetail onAddToCart={handleAddToCart} />}
         />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
+        <Route path="/payment-result" element={<PaymentResultPage />} />
 
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/signin" element={<SignInPage />} />

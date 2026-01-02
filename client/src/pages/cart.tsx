@@ -20,6 +20,9 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
   const [discount, setDiscount] = useState(0);
   const [freeShipping, setFreeShipping] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Checkout states
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Helper lấy token
   const getToken = () => localStorage.getItem("token");
@@ -184,6 +187,123 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
     }
   };
 
+  // Handle Checkout
+  const handleCheckout = async (addressId: number, paymentMethod: string) => {
+    const token = getToken();
+    
+    // Validate
+    if (cartItems.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+
+    if (!token) {
+      alert("Please sign in to checkout");
+      navigate("/signin");
+      return;
+    }
+
+    // Handle Online Payment - VNPay Integration
+    if (paymentMethod === "ONLINE") {
+      setIsCheckingOut(true);
+      
+      try {
+        // Calculate final amount (subtotal + shipping - discount)
+        const total = subtotal + actualShipping - discount;
+        const finalAmount = total; // Use total from subtotal + shipping - discount
+        
+        // Call VNPay payment URL creation endpoint
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/payment/create_payment_url`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            amount: finalAmount * 1000,
+            bankCode: "NCB", // Default bank code
+            language: "vn", // Default language
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create payment URL");
+        }
+
+        const data = await response.json();
+        
+        // Check if payment URL is returned
+        if (data.paymentUrl) {
+          // Save checkout info to localStorage for later (when returning from VNPay)
+          localStorage.setItem("pendingCheckout", JSON.stringify({
+            addressId: addressId,
+            paymentMethod: "ONLINE",
+            timestamp: Date.now()
+          }));
+          
+          // Open payment URL in new tab
+          window.open(data.paymentUrl, "_blank");
+          
+          // Optional: Show message to user
+          alert("Payment page opened in new tab. Please complete your payment.");
+        } else {
+          throw new Error("No payment URL returned");
+        }
+      } catch (error: any) {
+        console.error("VNPay payment error:", error);
+        alert(`Failed to initiate payment: ${error.message}`);
+      } finally {
+        setIsCheckingOut(false);
+      }
+      
+      return;
+    }
+
+    // Handle COD Payment
+    if (paymentMethod === "COD") {
+      setIsCheckingOut(true);
+      
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/orders`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            shippingAddressId: addressId,
+            paymentMethod: "COD",
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Checkout failed");
+        }
+
+        const orderData = await response.json();
+        const orderId = orderData.data?.id || orderData.id;
+
+        // Success - Clear cart and redirect
+        setCartItems([]);
+        localStorage.removeItem("cart"); // Clear guest cart if any
+        
+        alert("Order placed successfully!");
+        
+        // Redirect to order detail page
+        if (orderId) {
+          navigate(`/orders/${orderId}`);
+        } else {
+          navigate("/profile"); // Fallback to profile/order history
+        }
+      } catch (error: any) {
+        console.error("Checkout error:", error);
+        alert(`Failed to place order: ${error.message}`);
+      } finally {
+        setIsCheckingOut(false);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 font-sans">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -266,6 +386,8 @@ const CartPage = ({ cartItems, setCartItems }: CartProp) => {
                 shipping={actualShipping}
                 discount={discount}
                 onApplyDiscount={handleApplyDiscount}
+                onCheckout={handleCheckout}
+                isProcessing={isCheckingOut}
               />
             </div>
 
