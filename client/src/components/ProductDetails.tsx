@@ -3,7 +3,7 @@ import { Star, ShoppingCart, Minus, Plus } from "lucide-react";
 import { ImageWithFallback } from "./imagefallback";
 import { ProductReviews } from "./ProductReviews";
 import { useParams } from "react-router";
-import type { ProductSummary } from "./ProductCard";
+// import type { ProductSummary } from "./ProductCard";
 
 interface ProductVariant {
   id: string;

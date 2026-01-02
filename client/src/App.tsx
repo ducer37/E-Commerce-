@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import type { ProductSummary } from "./components/ProductCard";
-import { Routes, Route, useNavigate } from "react-router";
+// import type { ProductSummary } from "./components/ProductCard";
+import { Routes, Route } from "react-router";
 import HomePage from "./pages/home";
-import AboutPage from "./pages/about";
+// import AboutPage from "./pages/about";
 import Header from "./components/Header";
 import SignInPage from "./pages/signin";
 import RegisterPage from "./pages/register";
 import ProductsPage from "./pages/products";
 import CartPage from "./pages/cart";
 import ProductDetail from "./components/ProductDetails";
-import ContactPage from "./pages/contact";
+// import ContactPage from "./pages/contact";
 import ProfilePage from "./pages/profile";
 import OrderDetailPage from "./components/OrderDetailPage";
 
@@ -35,7 +35,7 @@ export interface FormData {
 
 function App() {
   const [cartItems, setCartItems] = useState<CartItemType[]>([]);
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
   useEffect(() => {
     const initializeCart = async () => {

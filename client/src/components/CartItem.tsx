@@ -20,7 +20,7 @@ export interface CartItemProps {
 export function CartItem({
   id,
   productId,
-  variantId,
+  // variantId,
   image,
   name,
   color,

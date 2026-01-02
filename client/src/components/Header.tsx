@@ -1,7 +1,7 @@
 import { Button } from "./variants/button";
 import { ShoppingCart, User, Menu } from "lucide-react";
 import { Link, useNavigate } from "react-router";
-import { useState } from "react";
+// import { useState } from "react";
 
 interface HeaderProps {
   cartItemCount: number;

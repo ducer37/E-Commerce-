@@ -4,7 +4,7 @@ import {
   ChevronRight,
   Calendar,
   Clock,
-  CheckCircle2,
+  // CheckCircle2,
   Truck,
   Loader2,
   XCircle,
